@@ -1,6 +1,3 @@
-import unittest
-
-import tensorrt as trt
 import torch
 from parameterized import parameterized
 from torch.testing._internal.common_utils import run_tests
@@ -18,17 +15,13 @@ class TestReshapeConverter(DispatchTestCase):
             ((1, 10, -1),),
         ]
     )
-    @unittest.skipIf(
-        trt.__version__ < "8.5",
-        "Shape tensor supported well in TensorRT 8.5 and later",
-    )
     def test_reshape(self, target_shape):
         class Reshape(torch.nn.Module):
             def __init__(self):
                 super().__init__()
 
             def forward(self, x):
-                return torch.ops.aten.view.default(x, target_shape)
+                return torch.ops.aten.reshape.default(x, target_shape)
 
         inputs = [torch.randn(1, 2, 10)]
         self.run_test(
@@ -44,12 +37,58 @@ class TestReshapeConverter(DispatchTestCase):
             ((2, 2, -1),),
         ]
     )
-    @unittest.skipIf(
-        trt.__version__ < "8.5",
-        "Shape tensor supported well in TensorRT 8.5 and later",
-    )
     def test_reshape_with_dynamic_shape(self, target_shape):
         class Reshape(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, x):
+                return torch.ops.aten.reshape.default(x, target_shape)
+
+        input_specs = [
+            Input(
+                shape=(-1, 2, 5),
+                dtype=torch.float32,
+                shape_ranges=[((1, 2, 5), (10, 2, 5), (10, 2, 5))],
+            ),
+        ]
+        self.run_test_with_dynamic_shape(
+            Reshape(),
+            input_specs,
+        )
+
+    @parameterized.expand(
+        [
+            ((-1,),),
+            ((20,),),
+            ((1, 20),),
+            ((1, 10, -1),),
+        ]
+    )
+    def test_view(self, target_shape):
+        class View(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, x):
+                return torch.ops.aten.view.default(x, target_shape)
+
+        inputs = [torch.randn(1, 2, 10)]
+        self.run_test(
+            View(),
+            inputs,
+        )
+
+    @parameterized.expand(
+        [
+            ((-1,),),
+            ((-1, 10),),
+            ((-1, 5),),
+            ((2, 2, -1),),
+        ]
+    )
+    def test_view_with_dynamic_shape(self, target_shape):
+        class View(torch.nn.Module):
             def __init__(self):
                 super().__init__()
 
@@ -64,7 +103,7 @@ class TestReshapeConverter(DispatchTestCase):
             ),
         ]
         self.run_test_with_dynamic_shape(
-            Reshape(),
+            View(),
             input_specs,
         )
 
