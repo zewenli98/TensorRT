@@ -754,12 +754,12 @@ def aten_ops_cumsum(
     )
 
 
-@dynamo_tensorrt_converter(torch.ops.aten.tile.default)  # type: ignore[misc]
+@dynamo_tensorrt_converter(torch.ops.aten.tile.default)
 @enforce_tensor_types(
     {
         0: (TRTTensor,),
     }
-)  # type: ignore[misc]
+)
 def aten_ops_tile(
     ctx: ConversionContext,
     target: Target,
@@ -777,7 +777,7 @@ def aten_ops_tile(
     )
 
 
-@dynamo_tensorrt_converter(torch.ops.aten.permute.default)  # type: ignore[misc]
+@dynamo_tensorrt_converter(torch.ops.aten.permute.default)
 @enforce_tensor_types(
     {
         0: (TRTTensor,),
@@ -1990,14 +1990,14 @@ def aten_ops_argmax(
     )
 
 
-@dynamo_tensorrt_converter(torch.ops.aten.addmm.default)  # type: ignore[misc]
+@dynamo_tensorrt_converter(torch.ops.aten.addmm.default)
 @enforce_tensor_types(
     {
         0: (TRTTensor,),
         1: (np.ndarray, torch.Tensor, TRTTensor),
         2: (np.ndarray, torch.Tensor, TRTTensor),
     }
-)  # type: ignore[misc]
+)
 def aten_ops_addmm(
     ctx: ConversionContext,
     target: Target,
@@ -2015,4 +2015,49 @@ def aten_ops_addmm(
         args[2],
         beta=kwargs.get("beta", 1),
         alpha=kwargs.get("alpha", 1),
+    )
+
+
+def constant_pad_param_validator(pad_node: Node) -> bool:
+    pad = pad_node.args[1]
+    if len(pad) != 4:
+        _LOGGER.debug(
+            f"Currently we don't support the length of pad != 4, got length {len(pad)}."
+        )
+        return False
+
+    value = args_bounds_check(pad_node.args, 2, 0)
+    if value != 0:
+        _LOGGER.debug(
+            f"Currently we don't support padding value != 0, got value={value}."
+        )
+        return False
+
+    return True
+
+
+@dynamo_tensorrt_converter(
+    torch.ops.aten.constant_pad_nd.default,
+    capability_validator=constant_pad_param_validator,
+)
+@enforce_tensor_types(
+    {
+        0: (TRTTensor,),
+    }
+)
+def aten_ops_constant_pad(
+    ctx: ConversionContext,
+    target: Target,
+    args: Tuple[Argument, ...],
+    kwargs: Dict[str, Argument],
+    name: str,
+) -> Union[TRTTensor, Sequence[TRTTensor]]:
+    return impl.pad.constant_padNd(
+        ctx,
+        target,
+        SourceIR.ATEN,
+        name,
+        args[0],
+        args[1],
+        args_bounds_check(args, 2, 0),
     )

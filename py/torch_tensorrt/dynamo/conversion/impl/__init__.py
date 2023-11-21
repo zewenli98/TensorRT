@@ -15,6 +15,7 @@ from . import (
     linear,
     matmul,
     normalization,
+    pad,
     permutation,
     pool,
     reduce,
