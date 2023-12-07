@@ -2443,3 +2443,25 @@ def aten_ops_pad(
         mode=args_bounds_check(args, 2, "constant"),
         value=args_bounds_check(args, 3, None),
     )
+
+
+@dynamo_tensorrt_converter(torch.ops.aten.nonzero.default)
+@enforce_tensor_types(
+    {
+        0: (TRTTensor,),
+    }
+)
+def aten_ops_nonzero(
+    ctx: ConversionContext,
+    target: Target,
+    args: Tuple[Argument, ...],
+    kwargs: Dict[str, Argument],
+    name: str,
+) -> Union[TRTTensor, Sequence[TRTTensor]]:
+    return impl.select.nonzero(
+        ctx,
+        target,
+        SourceIR.ATEN,
+        name,
+        args[0],
+    )

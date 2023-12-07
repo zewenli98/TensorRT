@@ -370,3 +370,15 @@ def index(
             reshape_output = reshape_layer.get_output(0)
 
     return reshape_output
+
+
+def nonzero(
+    ctx: ConversionContext,
+    target: Target,
+    source_ir: Optional[SourceIR],
+    name: str,
+    input: TRTTensor,
+) -> TRTTensor:
+    non_zero_layer = ctx.net.add_non_zero(input)
+    set_layer_name(non_zero_layer, target, name, source_ir)
+    return non_zero_layer.get_output(0)
